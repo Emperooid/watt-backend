@@ -1,0 +1,9 @@
+from django.urls import path
+
+from .views import ApplianceListView, CalculateView, DiscoListView
+
+urlpatterns = [
+    path("discos/", DiscoListView.as_view(), name="disco-list"),
+    path("appliances/", ApplianceListView.as_view(), name="appliance-list"),
+    path("calculate/", CalculateView.as_view(), name="calculate"),
+]
