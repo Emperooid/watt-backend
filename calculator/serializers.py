@@ -1,12 +1,12 @@
 from rest_framework import serializers
 
-from .models import Appliance, Disco, TariffBand
+from .models import Appliance, CustomerType, Disco, TariffBand
 
 
 class TariffBandSerializer(serializers.ModelSerializer):
     class Meta:
         model = TariffBand
-        fields = ["band", "rate_per_kwh", "min_hours_supply"]
+        fields = ["band", "non_md_rate", "md1_rate", "md2_rate", "min_hours_supply"]
 
 
 class DiscoSerializer(serializers.ModelSerializer):
@@ -14,7 +14,7 @@ class DiscoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Disco
-        fields = ["id", "code", "name", "tariff_bands"]
+        fields = ["id", "code", "name", "is_verified", "tariff_bands"]
 
 
 class ApplianceSerializer(serializers.ModelSerializer):
@@ -47,5 +47,6 @@ class CalculationItemSerializer(serializers.Serializer):
 class CalculationRequestSerializer(serializers.Serializer):
     disco_id = serializers.IntegerField()
     band = serializers.ChoiceField(choices=[c[0] for c in TariffBand.BAND_CHOICES])
+    customer_type = serializers.ChoiceField(choices=CustomerType.values, default=CustomerType.NON_MD)
     scenario = serializers.ChoiceField(choices=["good", "bad"], default="good")
     items = CalculationItemSerializer(many=True)

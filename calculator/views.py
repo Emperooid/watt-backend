@@ -37,11 +37,12 @@ class CalculateView(APIView):
         appliance_lookup = {a.id: a for a in Appliance.objects.filter(id__in=appliance_ids)}
 
         result = calculate(
-            rate_per_kwh=tariff.rate_per_kwh,
+            rate_per_kwh=tariff.rate_for(data["customer_type"]),
             scenario=data["scenario"],
             raw_items=data["items"],
             appliance_lookup=appliance_lookup,
         )
         result["disco"] = tariff.disco.code
         result["band"] = tariff.band
+        result["customer_type"] = data["customer_type"]
         return Response(result)

@@ -16,15 +16,32 @@ DISCOS = [
     ("YEDC", "Yola Electricity Distribution Company"),
 ]
 
-# Approximate, nationally-representative NERC band rates (₦/kWh) and their
-# guaranteed minimum daily supply hours. Real per-Disco rates vary slightly;
-# these are placeholder estimates for a "quick calculator", not billing data.
-BAND_RATES = {
-    "A": (225.00, 20),
-    "B": (209.50, 16),
-    "C": (160.00, 12),
-    "D": (110.00, 8),
-    "E": (75.00, 4),
+# Real, NERC-approved MYTO band structure for Ikeja Electric (IKEDC), supplied
+# by the user. band -> (min_hours_supply, non_md_rate, md1_rate, md2_rate).
+IKEDC_BANDS = {
+    "A": (20, 209.50, 209.50, 209.50),
+    "B": (16, 62.48, 63.17, 69.75),
+    "C": (12, 48.00, 50.03, 53.41),
+    "D": (8, 38.50, 45.29, 45.29),
+    "E": (4, 35.00, 45.29, 45.29),
+}
+
+# Approximate, nationally-representative placeholder rates for every Disco
+# whose real tariff table we don't have yet. Same value repeated across the
+# non_md/md1/md2 columns since we have no verified split for these. These
+# Discos are marked is_verified=False so the frontend can flag them as
+# estimates until real tables are supplied.
+PLACEHOLDER_BANDS = {
+    "A": (20, 225.00, 225.00, 225.00),
+    "B": (16, 209.50, 209.50, 209.50),
+    "C": (12, 160.00, 160.00, 160.00),
+    "D": (8, 110.00, 110.00, 110.00),
+    "E": (4, 75.00, 75.00, 75.00),
+}
+
+# Per-Disco overrides: verified real tariff tables go here as they're supplied.
+VERIFIED_BANDS = {
+    "IKEDC": IKEDC_BANDS,
 }
 
 APPLIANCES = [
@@ -55,14 +72,23 @@ class Command(BaseCommand):
     @transaction.atomic
     def handle(self, *args, **options):
         for code, name in DISCOS:
-            disco, _ = Disco.objects.update_or_create(code=code, defaults={"name": name})
-            for band, (rate, min_hours) in BAND_RATES.items():
+            is_verified = code in VERIFIED_BANDS
+            disco, _ = Disco.objects.update_or_create(
+                code=code, defaults={"name": name, "is_verified": is_verified}
+            )
+            bands = VERIFIED_BANDS.get(code, PLACEHOLDER_BANDS)
+            for band, (min_hours, non_md, md1, md2) in bands.items():
                 TariffBand.objects.update_or_create(
                     disco=disco,
                     band=band,
-                    defaults={"rate_per_kwh": rate, "min_hours_supply": min_hours},
+                    defaults={
+                        "non_md_rate": non_md,
+                        "md1_rate": md1,
+                        "md2_rate": md2,
+                        "min_hours_supply": min_hours,
+                    },
                 )
-        self.stdout.write(self.style.SUCCESS(f"Seeded {len(DISCOS)} Discos with {len(BAND_RATES)} tariff bands each."))
+        self.stdout.write(self.style.SUCCESS(f"Seeded {len(DISCOS)} Discos with 5 tariff bands each."))
 
         for name, watts, category, icon, has_inverter, savings_pct in APPLIANCES:
             Appliance.objects.update_or_create(
