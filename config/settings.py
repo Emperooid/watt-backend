@@ -94,6 +94,15 @@ CORS_ALLOWED_ORIGINS = [
     if o.strip()
 ]
 
+if DEBUG:
+    # Next.js picks a different port (3001, 3002, ...) whenever 3000 is busy,
+    # so allow any localhost/127.0.0.1 port in development instead of chasing
+    # it in CORS_ALLOWED_ORIGINS every time.
+    CORS_ALLOWED_ORIGIN_REGEXES = [
+        r"^http://localhost:\d+$",
+        r"^http://127\.0\.0\.1:\d+$",
+    ]
+
 REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
     "DEFAULT_PARSER_CLASSES": ["rest_framework.parsers.JSONParser"],
