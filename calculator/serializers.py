@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Appliance, CustomerType, Disco, TariffBand
+from .models import Appliance, CustomerType, Disco, TariffBand, WaitlistSignup
 
 
 class TariffBandSerializer(serializers.ModelSerializer):
@@ -50,3 +50,12 @@ class CalculationRequestSerializer(serializers.Serializer):
     customer_type = serializers.ChoiceField(choices=CustomerType.values, default=CustomerType.NON_MD)
     scenario = serializers.ChoiceField(choices=["good", "bad"], default="good")
     items = CalculationItemSerializer(many=True)
+
+
+class WaitlistSignupSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WaitlistSignup
+        fields = ["email"]
+        # Uniqueness is handled in the view via get_or_create so re-signups
+        # respond gracefully instead of surfacing a validation error.
+        extra_kwargs = {"email": {"validators": []}}

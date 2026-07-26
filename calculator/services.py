@@ -6,6 +6,7 @@ Kept free of Django ORM/request concerns so it stays easy to unit test.
 from dataclasses import dataclass, field
 from decimal import Decimal
 
+DAYS_PER_WEEK = 7
 DAYS_PER_MONTH = 30
 MONTHS_PER_YEAR = 12
 
@@ -17,6 +18,14 @@ BAD_DAY_HOURS_FACTOR = 0.3
 # Rough benchmark used only for the "% of average household bill" insight.
 # Placeholder until real survey data is available.
 AVERAGE_HOUSEHOLD_MONTHLY_BILL = 25000
+
+# Generator-vs-grid comparison assumptions: cost of running a small petrol
+# generator for the same number of hours instead of drawing from the grid.
+# Independent of appliance wattage — approximates "keeping a generator on"
+# rather than that generator's efficiency at this specific load. Adjustable
+# placeholders, not measured data.
+GENERATOR_FUEL_PRICE_PER_LITRE = 680
+GENERATOR_LITRES_PER_HOUR = 0.5
 
 
 @dataclass
@@ -56,9 +65,16 @@ def calculate(*, rate_per_kwh: Decimal, scenario: str, raw_items: list[dict], ap
 
     daily_kwh = sum(i.kwh_per_day for i in items)
     daily_cost = sum(i.cost_per_day for i in items)
+    weekly_cost = daily_cost * DAYS_PER_WEEK
     monthly_kwh = daily_kwh * DAYS_PER_MONTH
     monthly_cost = daily_cost * DAYS_PER_MONTH
     yearly_cost = monthly_cost * MONTHS_PER_YEAR
+
+    total_effective_hours_per_day = sum(i.effective_hours for i in items)
+    generator_cost_per_day = total_effective_hours_per_day * GENERATOR_LITRES_PER_HOUR * GENERATOR_FUEL_PRICE_PER_LITRE
+    generator_cost_per_month = generator_cost_per_day * DAYS_PER_MONTH
+    savings_amount = generator_cost_per_month - monthly_cost
+    savings_pct = round((savings_amount / generator_cost_per_month) * 100, 1) if generator_cost_per_month > 0 else 0
 
     ranking = []
     if daily_kwh > 0:
@@ -89,12 +105,23 @@ def calculate(*, rate_per_kwh: Decimal, scenario: str, raw_items: list[dict], ap
         "totals": {
             "daily_kwh": round(daily_kwh, 3),
             "daily_cost": round(daily_cost, 2),
+            "weekly_cost": round(weekly_cost, 2),
             "monthly_kwh": round(monthly_kwh, 2),
             "monthly_cost": round(monthly_cost, 2),
             "yearly_cost": round(yearly_cost, 2),
         },
         "ranking": ranking,
         "insights": insights,
+        "generator_comparison": {
+            "grid_cost_per_month": round(monthly_cost, 2),
+            "generator_cost_per_month": round(generator_cost_per_month, 2),
+            "savings_amount": round(savings_amount, 2),
+            "savings_pct": savings_pct,
+            "assumptions": (
+                f"Generator cost is based on ₦{GENERATOR_FUEL_PRICE_PER_LITRE} per litre of petrol "
+                f"and {GENERATOR_LITRES_PER_HOUR}L/h consumption."
+            ),
+        },
     }
 
 

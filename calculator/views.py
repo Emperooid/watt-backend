@@ -2,8 +2,13 @@ from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Appliance, Disco, TariffBand
-from .serializers import ApplianceSerializer, CalculationRequestSerializer, DiscoSerializer
+from .models import Appliance, Disco, TariffBand, WaitlistSignup
+from .serializers import (
+    ApplianceSerializer,
+    CalculationRequestSerializer,
+    DiscoSerializer,
+    WaitlistSignupSerializer,
+)
 from .services import calculate
 
 
@@ -46,3 +51,18 @@ class CalculateView(APIView):
         result["band"] = tariff.band
         result["customer_type"] = data["customer_type"]
         return Response(result)
+
+
+class WaitlistView(APIView):
+    def get(self, request):
+        return Response({"count": WaitlistSignup.objects.count()})
+
+    def post(self, request):
+        serializer = WaitlistSignupSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data["email"]
+        _, created = WaitlistSignup.objects.get_or_create(email=email)
+        return Response(
+            {"count": WaitlistSignup.objects.count(), "already_joined": not created},
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+        )
