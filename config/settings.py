@@ -13,11 +13,19 @@ load_dotenv(BASE_DIR / ".env")
 
 SECRET_KEY = os.environ.get("SECRET_KEY", "django-insecure-dev-only-change-me")
 
-DEBUG = os.environ.get("DEBUG", "True") == "True"
+DEBUG = os.environ.get("DEBUG", "False") == "True"
 
 ALLOWED_HOSTS = [
-    h.strip() for h in os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if h.strip()
+    h.strip()
+    for h in os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1,watt-backend-qin8.onrender.com").split(",")
+    if h.strip()
 ]
+
+# Render sets this automatically for every web service; picking it up means
+# we don't have to hardcode/maintain the Render hostname above.
+RENDER_EXTERNAL_HOSTNAME = os.environ.get("RENDER_EXTERNAL_HOSTNAME")
+if RENDER_EXTERNAL_HOSTNAME and RENDER_EXTERNAL_HOSTNAME not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -90,15 +98,21 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 CORS_ALLOWED_ORIGINS = [
     o.strip()
-    for o in os.environ.get("CORS_ALLOWED_ORIGINS", "http://localhost:3000").split(",")
+    for o in os.environ.get(
+        "CORS_ALLOWED_ORIGINS", "http://localhost:3000,https://watt-frontend.vercel.app"
+    ).split(",")
     if o.strip()
 ]
+
+# Always allow Vercel preview deployments (e.g. watt-frontend-git-<branch>-<team>.vercel.app)
+# in addition to the production URL above.
+CORS_ALLOWED_ORIGIN_REGEXES = [r"^https://watt-frontend.*\.vercel\.app$"]
 
 if DEBUG:
     # Next.js picks a different port (3001, 3002, ...) whenever 3000 is busy,
     # so allow any localhost/127.0.0.1 port in development instead of chasing
     # it in CORS_ALLOWED_ORIGINS every time.
-    CORS_ALLOWED_ORIGIN_REGEXES = [
+    CORS_ALLOWED_ORIGIN_REGEXES += [
         r"^http://localhost:\d+$",
         r"^http://127\.0\.0\.1:\d+$",
     ]

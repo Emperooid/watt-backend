@@ -4,6 +4,9 @@ from django.db import models
 class Disco(models.Model):
     code = models.CharField(max_length=10, unique=True)
     name = models.CharField(max_length=100)
+    coverage = models.CharField(
+        max_length=200, blank=True, help_text="States/areas this Disco serves, e.g. 'FCT, Niger, Kogi, Nasarawa'"
+    )
     is_verified = models.BooleanField(
         default=False,
         help_text="True once this Disco's tariff table has been checked against an official NERC/Disco source",

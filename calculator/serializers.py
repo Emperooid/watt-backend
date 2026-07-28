@@ -14,7 +14,7 @@ class DiscoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Disco
-        fields = ["id", "code", "name", "is_verified", "tariff_bands"]
+        fields = ["id", "code", "name", "coverage", "is_verified", "tariff_bands"]
 
 
 class ApplianceSerializer(serializers.ModelSerializer):

@@ -3,22 +3,25 @@ from django.db import transaction
 
 from calculator.models import Appliance, ApplianceCategory, Disco, TariffBand
 
+# The 11 electricity distribution companies (Discos) licensed by NERC, with
+# their coverage areas.
 DISCOS = [
-    ("EKEDC", "Eko Electricity Distribution Company"),
-    ("IKEDC", "Ikeja Electric"),
-    ("AEDC", "Abuja Electricity Distribution Company"),
-    ("IBEDC", "Ibadan Electricity Distribution Company"),
-    ("EEDC", "Enugu Electricity Distribution Company"),
-    ("KEDCO", "Kano Electricity Distribution Company"),
-    ("BEDC", "Benin Electricity Distribution Company"),
-    ("JED", "Jos Electricity Distribution"),
-    ("PHED", "Port Harcourt Electricity Distribution Company"),
-    ("YEDC", "Yola Electricity Distribution Company"),
+    ("AEDC", "Abuja Electricity Distribution Company", "FCT, Niger, Kogi, Nasarawa"),
+    ("BEDC", "Benin Electricity Distribution Company", "Edo, Delta, Ondo, Ekiti"),
+    ("EKEDC", "Eko Electricity Distribution Company", "Southern Lagos, Agbara"),
+    ("EEDC", "Enugu Electricity Distribution Company", "Enugu, Anambra, Ebonyi, Abia, Imo"),
+    ("IBEDC", "Ibadan Electricity Distribution Company", "Oyo, Ogun, Osun, Kwara, parts of Niger, Ekiti, Kogi"),
+    ("IE", "Ikeja Electric", "Northern Lagos"),
+    ("JED", "Jos Electricity Distribution Company", "Plateau, Bauchi, Benue, Gombe"),
+    ("KAEDCO", "Kaduna Electricity Distribution Company", "Kaduna, Kebbi, Sokoto, Zamfara"),
+    ("KEDCO", "Kano Electricity Distribution Company", "Kano, Katsina, Jigawa"),
+    ("PHED", "Port Harcourt Electricity Distribution Company", "Rivers, Bayelsa, Cross River, Akwa Ibom"),
+    ("YEDC", "Yola Electricity Distribution Company", "Adamawa, Borno, Taraba, Yobe"),
 ]
 
-# Real, NERC-approved MYTO band structure for Ikeja Electric (IKEDC), supplied
+# Real, NERC-approved MYTO band structure for Ikeja Electric (IE), supplied
 # by the user. band -> (min_hours_supply, non_md_rate, md1_rate, md2_rate).
-IKEDC_BANDS = {
+IE_BANDS = {
     "A": (20, 209.50, 209.50, 209.50),
     "B": (16, 62.48, 63.17, 69.75),
     "C": (12, 48.00, 50.03, 53.41),
@@ -41,7 +44,7 @@ PLACEHOLDER_BANDS = {
 
 # Per-Disco overrides: verified real tariff tables go here as they're supplied.
 VERIFIED_BANDS = {
-    "IKEDC": IKEDC_BANDS,
+    "IE": IE_BANDS,
 }
 
 APPLIANCES = [
@@ -71,10 +74,10 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def handle(self, *args, **options):
-        for code, name in DISCOS:
+        for code, name, coverage in DISCOS:
             is_verified = code in VERIFIED_BANDS
             disco, _ = Disco.objects.update_or_create(
-                code=code, defaults={"name": name, "is_verified": is_verified}
+                code=code, defaults={"name": name, "coverage": coverage, "is_verified": is_verified}
             )
             bands = VERIFIED_BANDS.get(code, PLACEHOLDER_BANDS)
             for band, (min_hours, non_md, md1, md2) in bands.items():
@@ -88,6 +91,11 @@ class Command(BaseCommand):
                         "min_hours_supply": min_hours,
                     },
                 )
+        valid_codes = {code for code, _, _ in DISCOS}
+        stale, _ = Disco.objects.exclude(code__in=valid_codes).delete()
+        if stale:
+            self.stdout.write(self.style.WARNING(f"Removed {stale} stale Disco/tariff row(s) no longer in the list."))
+
         self.stdout.write(self.style.SUCCESS(f"Seeded {len(DISCOS)} Discos with 5 tariff bands each."))
 
         for name, watts, category, icon, has_inverter, savings_pct in APPLIANCES:
