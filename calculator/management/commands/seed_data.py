@@ -19,32 +19,17 @@ DISCOS = [
     ("YEDC", "Yola Electricity Distribution Company", "Adamawa, Borno, Taraba, Yobe"),
 ]
 
-# Real, NERC-approved MYTO band structure for Ikeja Electric (IE), supplied
-# by the user. band -> (min_hours_supply, non_md_rate, md1_rate, md2_rate).
-IE_BANDS = {
+# Real NERC MYTO band structure, "Jul 2024 - Jun 2026" column of the
+# official Approved Allowed Tariffs (₦/kWh) table (nerc.gov.ng/resource-category/myto).
+# Per NERC's MYTO order, these Non-MD/MD1/MD2 rates are the same nationally
+# across every Disco for a given band, so a single table applies to all 11.
+# band -> (min_hours_supply, non_md_rate, md1_rate, md2_rate).
+NATIONAL_BANDS = {
     "A": (20, 209.50, 209.50, 209.50),
     "B": (16, 62.48, 63.17, 69.75),
-    "C": (12, 48.00, 50.03, 53.41),
-    "D": (8, 38.50, 45.29, 45.29),
-    "E": (4, 35.00, 45.29, 45.29),
-}
-
-# Approximate, nationally-representative placeholder rates for every Disco
-# whose real tariff table we don't have yet. Same value repeated across the
-# non_md/md1/md2 columns since we have no verified split for these. These
-# Discos are marked is_verified=False so the frontend can flag them as
-# estimates until real tables are supplied.
-PLACEHOLDER_BANDS = {
-    "A": (20, 225.00, 225.00, 225.00),
-    "B": (16, 209.50, 209.50, 209.50),
-    "C": (12, 160.00, 160.00, 160.00),
-    "D": (8, 110.00, 110.00, 110.00),
-    "E": (4, 75.00, 75.00, 75.00),
-}
-
-# Per-Disco overrides: verified real tariff tables go here as they're supplied.
-VERIFIED_BANDS = {
-    "IE": IE_BANDS,
+    "C": (12, 45.80, 50.03, 53.41),
+    "D": (8, 31.24, 45.29, 45.29),
+    "E": (4, 31.24, 45.29, 45.29),
 }
 
 APPLIANCES = [
@@ -75,12 +60,10 @@ class Command(BaseCommand):
     @transaction.atomic
     def handle(self, *args, **options):
         for code, name, coverage in DISCOS:
-            is_verified = code in VERIFIED_BANDS
             disco, _ = Disco.objects.update_or_create(
-                code=code, defaults={"name": name, "coverage": coverage, "is_verified": is_verified}
+                code=code, defaults={"name": name, "coverage": coverage, "is_verified": True}
             )
-            bands = VERIFIED_BANDS.get(code, PLACEHOLDER_BANDS)
-            for band, (min_hours, non_md, md1, md2) in bands.items():
+            for band, (min_hours, non_md, md1, md2) in NATIONAL_BANDS.items():
                 TariffBand.objects.update_or_create(
                     disco=disco,
                     band=band,
