@@ -19,13 +19,12 @@ BAD_DAY_HOURS_FACTOR = 0.3
 # Placeholder until real survey data is available.
 AVERAGE_HOUSEHOLD_MONTHLY_BILL = 25000
 
-# Generator-vs-grid comparison assumptions: cost of running a small petrol
-# generator for the same number of hours instead of drawing from the grid.
-# Independent of appliance wattage — approximates "keeping a generator on"
-# rather than that generator's efficiency at this specific load. Adjustable
-# placeholders, not measured data.
+# Generator-vs-grid comparison: cost of running a small petrol generator to
+# cover the same load instead of drawing from the grid. Scales with the
+# actual load (kWh consumed) rather than assuming a fixed generator size, so
+# it stays realistic whether you're running one fan or a whole AC unit.
 GENERATOR_FUEL_PRICE_PER_LITRE = 680
-GENERATOR_LITRES_PER_HOUR = 0.5
+GENERATOR_LITRES_PER_KWH = 0.4
 
 
 @dataclass
@@ -70,8 +69,7 @@ def calculate(*, rate_per_kwh: Decimal, scenario: str, raw_items: list[dict], ap
     monthly_cost = daily_cost * DAYS_PER_MONTH
     yearly_cost = monthly_cost * MONTHS_PER_YEAR
 
-    total_effective_hours_per_day = sum(i.effective_hours for i in items)
-    generator_cost_per_day = total_effective_hours_per_day * GENERATOR_LITRES_PER_HOUR * GENERATOR_FUEL_PRICE_PER_LITRE
+    generator_cost_per_day = daily_kwh * GENERATOR_LITRES_PER_KWH * GENERATOR_FUEL_PRICE_PER_LITRE
     generator_cost_per_month = generator_cost_per_day * DAYS_PER_MONTH
     savings_amount = generator_cost_per_month - monthly_cost
     savings_pct = round((savings_amount / generator_cost_per_month) * 100, 1) if generator_cost_per_month > 0 else 0
@@ -118,8 +116,8 @@ def calculate(*, rate_per_kwh: Decimal, scenario: str, raw_items: list[dict], ap
             "savings_amount": round(savings_amount, 2),
             "savings_pct": savings_pct,
             "assumptions": (
-                f"Generator cost is based on ₦{GENERATOR_FUEL_PRICE_PER_LITRE} per litre of petrol "
-                f"and {GENERATOR_LITRES_PER_HOUR}L/h consumption."
+                f"Generator cost assumes ~{GENERATOR_LITRES_PER_KWH}L of petrol per kWh generated "
+                f"at ₦{GENERATOR_FUEL_PRICE_PER_LITRE}/litre, scaled to your actual load."
             ),
         },
     }
