@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Appliance, CustomerType, Disco, TariffBand, WaitlistSignup
+from .models import Appliance, CustomerType, Disco, PdfReportOrder, TariffBand, WaitlistSignup
 
 
 class TariffBandSerializer(serializers.ModelSerializer):
@@ -59,3 +59,15 @@ class WaitlistSignupSerializer(serializers.ModelSerializer):
         # Uniqueness is handled in the view via get_or_create so re-signups
         # respond gracefully instead of surfacing a validation error.
         extra_kwargs = {"email": {"validators": []}}
+
+
+class ReportInitiateSerializer(CalculationRequestSerializer):
+    """Same shape as a /calculate/ request, plus the email to send the PDF to."""
+
+    email = serializers.EmailField()
+
+
+class PdfReportOrderSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PdfReportOrder
+        fields = ["reference", "status", "report_sent"]

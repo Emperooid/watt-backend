@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Appliance, Disco, TariffBand, WaitlistSignup
+from .models import Appliance, Disco, PdfReportOrder, TariffBand, WaitlistSignup
 
 
 class TariffBandInline(admin.TabularInline):
@@ -26,3 +26,12 @@ class WaitlistSignupAdmin(admin.ModelAdmin):
     list_display = ("email", "created_at")
     search_fields = ("email",)
     ordering = ("-created_at",)
+
+
+@admin.register(PdfReportOrder)
+class PdfReportOrderAdmin(admin.ModelAdmin):
+    list_display = ("reference", "email", "status", "report_sent", "created_at", "paid_at")
+    list_filter = ("status", "report_sent")
+    search_fields = ("email", "reference")
+    ordering = ("-created_at",)
+    readonly_fields = ("reference", "amount_kobo", "planner_state", "created_at", "paid_at")

@@ -90,3 +90,37 @@ class WaitlistSignup(models.Model):
 
     def __str__(self):
         return self.email
+
+
+class PdfReportOrder(models.Model):
+    """A paid request for an emailed PDF version of a planner calculation.
+
+    `planner_state` stores exactly what was sent to /api/calculate/ (disco,
+    band, customer_type, scenario, items) so the report can be regenerated
+    deterministically once payment is confirmed, without trusting anything
+    the client sends after checkout.
+    """
+
+    STATUS_PENDING = "pending"
+    STATUS_PAID = "paid"
+    STATUS_FAILED = "failed"
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Pending"),
+        (STATUS_PAID, "Paid"),
+        (STATUS_FAILED, "Failed"),
+    ]
+
+    email = models.EmailField()
+    reference = models.CharField(max_length=100, unique=True)
+    amount_kobo = models.PositiveIntegerField()
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    planner_state = models.JSONField()
+    report_sent = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    paid_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.reference} ({self.status})"
